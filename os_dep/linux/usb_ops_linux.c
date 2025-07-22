@@ -768,7 +768,11 @@ void usb_recv_tasklet(unsigned long priv)
 	}
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 void usb_read_port_complete(struct urb *purb, struct pt_regs *regs)
+#else
+void usb_read_port_complete(struct urb *purb)
+#endif
 {
 	struct recv_buf	*precvbuf = (struct recv_buf *)purb->context;
 	_adapter			*padapter = (_adapter *)precvbuf->adapter;
@@ -963,7 +967,12 @@ void usb_recv_tasklet(unsigned long priv)
 	}
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 void usb_read_port_complete(struct urb *purb, struct pt_regs *regs)
+#else
+#undef usb_read_port_complete
+void usb_read_port_complete(struct urb *purb)
+#endif
 {
 	struct recv_buf	*precvbuf = (struct recv_buf *)purb->context;
 	_adapter			*padapter = (_adapter *)precvbuf->adapter;

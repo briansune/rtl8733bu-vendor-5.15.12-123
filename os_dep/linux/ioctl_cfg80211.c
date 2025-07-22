@@ -204,7 +204,9 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset,
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
 	if (started) {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)) || defined(CONFIG_MLD_KERNEL_PATCH)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)) || defined(CONFIG_MLD_KERNEL_PATCH)
+    cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, false);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
 		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, false, punct_bitmap);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
 		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, false);
@@ -229,7 +231,10 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset,
 	if (!rtw_cfg80211_allow_ch_switch_notify(adapter))
 		goto exit;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)) || defined(CONFIG_MLD_KERNEL_PATCH)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
+    // New prototype, 3 args only
+    cfg80211_ch_switch_notify(adapter->pnetdev, &chdef, 0);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)) || defined(CONFIG_MLD_KERNEL_PATCH)
 	cfg80211_ch_switch_notify(adapter->pnetdev, &chdef, 0, punct_bitmap);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 2))
 	cfg80211_ch_switch_notify(adapter->pnetdev, &chdef, 0);
@@ -5413,6 +5418,25 @@ exit:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
+static int cfg80211_rtw_change_beacon(struct wiphy *wiphy,
+                                     struct net_device *ndev,
+                                     struct cfg80211_ap_update *info)
+{
+    	_adapter *adapter = rtw_netdev_priv(ndev);
+	int ret = 0;
+
+    // No assocresp_ies in cfg80211_ap_update, skip that part
+
+    // Use beacon and probe_resp fields
+	if (info->beacon.head_len > 0)
+    ret = rtw_add_beacon(adapter,
+                         info->beacon.head, info->beacon.head_len,
+                         info->beacon.tail, info->beacon.tail_len);
+
+    return ret;
+}
+#else
 static int cfg80211_rtw_change_beacon(struct wiphy *wiphy, struct net_device *ndev,
 		struct cfg80211_beacon_data *info)
 {
@@ -5438,6 +5462,7 @@ static int cfg80211_rtw_change_beacon(struct wiphy *wiphy, struct net_device *nd
 
 	return ret;
 }
+#endif
 
 static int cfg80211_rtw_stop_ap(struct wiphy *wiphy, struct net_device *ndev
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || defined(CONFIG_MLD_KERNEL_PATCH)
