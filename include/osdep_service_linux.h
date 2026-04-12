@@ -56,6 +56,10 @@
 #include <linux/list.h>
 #include <linux/vmalloc.h>
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0))
+	#include <linux/timer.h>
+#endif
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 	#include <uapi/linux/sched/types.h>
 #endif
@@ -371,7 +375,9 @@ static inline void timer_hdl(struct timer_list *in_timer)
 static inline void timer_hdl(unsigned long cntx)
 #endif
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0))
+	_timer *ptimer = container_of(in_timer, _timer, timer);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
 	_timer *ptimer = from_timer(ptimer, in_timer, timer);
 #else
 	_timer *ptimer = (_timer *)cntx;
@@ -406,12 +412,20 @@ __inline static void _set_timer(_timer *ptimer, u32 delay_time)
 
 __inline static void _cancel_timer(_timer *ptimer, u8 *bcancelled)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0))
+	*bcancelled = timer_delete_sync(&ptimer->timer) == 1 ? 1 : 0;
+#else
 	*bcancelled = del_timer_sync(&ptimer->timer) == 1 ? 1 : 0;
+#endif
 }
 
 __inline static void _cancel_timer_async(_timer *ptimer)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0))
+	timer_delete(&ptimer->timer);
+#else
 	del_timer(&ptimer->timer);
+#endif
 }
 
 static inline void _init_workitem(_workitem *pwork, void *pfunc, void *cntx)

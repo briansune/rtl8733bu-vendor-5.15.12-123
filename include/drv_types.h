@@ -2260,4 +2260,8 @@ int rtw_suspend_free_assoc_resource(_adapter *padapter);
 	#include <pci_hal.h>
 #endif
 
+#ifndef __PACK
+#define __PACK __attribute__((__packed__))
+#endif
+
 #endif /* __DRV_TYPES_H__ */

@@ -1,5 +1,7 @@
 EXTRA_CFLAGS += $(USER_EXTRA_CFLAGS)
+ccflags-y += $(USER_EXTRA_CFLAGS)
 EXTRA_CFLAGS += -O1
+ccflags-y += -O1
 #EXTRA_CFLAGS += -O3
 #EXTRA_CFLAGS += -Wall
 #EXTRA_CFLAGS += -Wextra
@@ -8,6 +10,7 @@ EXTRA_CFLAGS += -O1
 #EXTRA_CFLAGS += -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes
 
 EXTRA_CFLAGS += -Wno-unused-variable
+ccflags-y += -Wno-unused-variable
 #EXTRA_CFLAGS += -Wno-unused-value
 #EXTRA_CFLAGS += -Wno-unused-label
 #EXTRA_CFLAGS += -Wno-unused-parameter
@@ -34,9 +37,11 @@ endif
 GCC_VER_49 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 4.9 | bc )
 ifeq ($(GCC_VER_49),1)
 EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
+ccflags-y += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
 endif
 
 EXTRA_CFLAGS += -I$(src)/include
+ccflags-y += -I$(src)/include
 
 EXTRA_LDFLAGS += --strip-debug
 
@@ -329,9 +334,11 @@ _HAL_INTFS_FILES :=	hal/hal_intf.o \
 
 
 EXTRA_CFLAGS += -I$(src)/platform
+ccflags-y += -I$(src)/platform
 _PLATFORM_FILES := platform/platform_ops.o
 
 EXTRA_CFLAGS += -I$(src)/hal/btc
+ccflags-y += -I$(src)/hal/btc
 
 ########### HAL_RTL8188E #################################
 ifeq ($(CONFIG_RTL8188E), y)
@@ -1117,6 +1124,7 @@ endif
 
 ifeq ($(CONFIG_AP_MODE), y)
 EXTRA_CFLAGS += -DCONFIG_AP_MODE
+ccflags-y += -DCONFIG_AP_MODE
 endif
 
 ifeq ($(CONFIG_ECSA), y)
@@ -1446,7 +1454,9 @@ endif
 
 ifeq ($(CONFIG_RTW_DEBUG), y)
 EXTRA_CFLAGS += -DCONFIG_RTW_DEBUG
+ccflags-y += -DCONFIG_RTW_DEBUG
 EXTRA_CFLAGS += -DRTW_LOG_LEVEL=$(CONFIG_RTW_LOG_LEVEL)
+ccflags-y += -DRTW_LOG_LEVEL=$(CONFIG_RTW_LOG_LEVEL)
 endif
 
 ifeq ($(CONFIG_PROC_DEBUG), y)
@@ -1455,11 +1465,14 @@ endif
 
 ifeq ($(CONFIG_RTW_UP_MAPPING_RULE), dscp)
 EXTRA_CFLAGS += -DCONFIG_RTW_UP_MAPPING_RULE=1
+ccflags-y += -DCONFIG_RTW_UP_MAPPING_RULE=1
 else
 EXTRA_CFLAGS += -DCONFIG_RTW_UP_MAPPING_RULE=0
+ccflags-y += -DCONFIG_RTW_UP_MAPPING_RULE=0
 endif
 
 EXTRA_CFLAGS += -DDM_ODM_SUPPORT_TYPE=0x04
+ccflags-y += -DDM_ODM_SUPPORT_TYPE=0x04
 
 ifeq ($(CONFIG_RTW_MBO), y)
 EXTRA_CFLAGS += -DCONFIG_RTW_MBO -DCONFIG_RTW_80211K -DCONFIG_RTW_WNM -DCONFIG_RTW_BTM_ROAM
@@ -2217,19 +2230,29 @@ MODULE_NAME :=8189es_kk
 endif
 
 ifeq ($(CONFIG_PLATFORM_ARM_CYCLONE_FPSOC), y)
+
 EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
+ccflags-y += -DCONFIG_LITTLE_ENDIAN
+
 EXTRA_CFLAGS += -DCONFIG_CONCURRENT_MODE
+ccflags-y += -DCONFIG_CONCURRENT_MODE
 EXTRA_CFLAGS += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
+ccflags-y += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
 EXTRA_CFLAGS += -DCONFIG_PLATFORM_OPS
+ccflags-y += -DCONFIG_PLATFORM_OPS
 
 ifeq ($(CONFIG_USB_HCI), y)
 _PLATFORM_FILES += platform/platform_ARM_CYCLONE_FPSOC.o
 EXTRA_CFLAGS += -DCONFIG_USE_USB_BUFFER_ALLOC_TX
+ccflags-y += -DCONFIG_USE_USB_BUFFER_ALLOC_TX
 endif
 
 ARCH := arm
 CROSS_COMPILE := /usr/bin/arm-linux-gnueabihf-
-KSRC := /home/intel/rootfs/lib/modules/6.12.11-g2f0b0270dbab-dirty/build
+#KSRC := /home/intel/rootfs/lib/modules/6.12.11-g2f0b0270dbab-dirty/build
+#KSRC := /home/intel/rootfs/lib/modules/6.12.19-g7b497655d942-dirty/build
+#KSRC := /home/intel/rootfs/lib/modules/6.12.33-g3234b1ed8956-dirty/build
+KSRC := /home/intel/rootfs/lib/modules/6.19.0-g05bcc5ec0661-dirty/build
 endif
 
 
@@ -2628,6 +2651,8 @@ rtk_core += core/rtw_sdio.o
 endif
 
 EXTRA_CFLAGS += -I$(src)/core/crypto
+ccflags-y += -I$(src)/core/crypto
+
 rtk_core += \
 		core/crypto/aes-internal.o \
 		core/crypto/aes-internal-enc.o \
@@ -2638,11 +2663,12 @@ rtk_core += \
 		core/crypto/gcmp.o \
 		core/crypto/aes-siv.o \
 		core/crypto/aes-ctr.o \
-		core/crypto/sha256-internal.o \
-		core/crypto/sha256.o \
-		core/crypto/sha256-prf.o \
 		core/crypto/rtw_crypto_wrap.o \
 		core/rtw_swcrypto.o
+		
+#		core/crypto/sha256-internal.o \
+#		core/crypto/sha256.o \
+#		core/crypto/sha256-prf.o \
 
 $(MODULE_NAME)-y += $(rtk_core)
 

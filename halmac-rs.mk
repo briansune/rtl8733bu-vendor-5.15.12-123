@@ -6,6 +6,7 @@
 # Base directory
 path_hm := hal/halmac-rs
 EXTRA_CFLAGS += -DCONFIG_HALMAC_RS
+ccflags-y += -DCONFIG_HALMAC_RS
 
 ifeq ($(CONFIG_PCI_HCI), y)
 pci := y
