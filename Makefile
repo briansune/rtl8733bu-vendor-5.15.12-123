@@ -2252,8 +2252,7 @@ CROSS_COMPILE := /usr/bin/arm-linux-gnueabihf-
 #KSRC := /home/intel/rootfs/lib/modules/6.12.11-g2f0b0270dbab-dirty/build
 #KSRC := /home/intel/rootfs/lib/modules/6.12.19-g7b497655d942-dirty/build
 #KSRC := /home/intel/rootfs/lib/modules/6.12.33-g3234b1ed8956-dirty/build
-#KSRC := /home/intel/rootfs/lib/modules/6.19.0-g05bcc5ec0661-dirty/build
-KSRC := /home/intel/rootfs/lib/modules/7.1.0-gddb27efeebfa-dirty/build
+KSRC := /home/intel/rootfs/lib/modules/6.19.0-g05bcc5ec0661-dirty/build
 endif
 
 
