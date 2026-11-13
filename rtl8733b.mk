@@ -1,5 +1,4 @@
 EXTRA_CFLAGS += -DCONFIG_RTL8733B
-ccflags-y += -DCONFIG_RTL8733B
 
 #ifeq ($(CONFIG_MP_INCLUDED), y)
 ### 8733B Default Enable VHT MP HW TX MODE ###

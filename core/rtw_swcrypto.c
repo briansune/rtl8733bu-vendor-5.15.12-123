@@ -17,10 +17,7 @@
 #include <aes.h>
 #include <aes_siv.h>
 #include <aes_wrap.h>
-
-// #include <sha256.h>
-#include <crypto/sha2.h>
-
+#include <sha256.h>
 #include <wlancrypto_wrap.h>
 
 /**
