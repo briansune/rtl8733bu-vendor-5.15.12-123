@@ -26,8 +26,6 @@
 #ifndef __PHYDMPREDEFINE_H__
 #define __PHYDMPREDEFINE_H__
 
-#include <linux/bitops.h>
-
 /****************************************************************
  * 1 ============================================================
  * 1  Definition

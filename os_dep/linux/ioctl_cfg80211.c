@@ -204,9 +204,9 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset,
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
 	if (started) {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)) || defined(CONFIG_MLD_KERNEL_PATCH)
-    cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, false);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0))
+		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, false);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)) || defined(CONFIG_MLD_KERNEL_PATCH)
 		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, false, punct_bitmap);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
 		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, false);
@@ -231,9 +231,8 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset,
 	if (!rtw_cfg80211_allow_ch_switch_notify(adapter))
 		goto exit;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
-    // New prototype, 3 args only
-    cfg80211_ch_switch_notify(adapter->pnetdev, &chdef, 0);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0))
+	cfg80211_ch_switch_notify(adapter->pnetdev, &chdef, 0);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)) || defined(CONFIG_MLD_KERNEL_PATCH)
 	cfg80211_ch_switch_notify(adapter->pnetdev, &chdef, 0, punct_bitmap);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 2))
@@ -3560,11 +3559,11 @@ static void cfg80211_rtw_abort_scan(struct wiphy *wiphy,
 }
 #endif
 
-static int cfg80211_rtw_set_wiphy_params(struct wiphy *wiphy,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0))
-	int radio_idx,
+static int cfg80211_rtw_set_wiphy_params(struct wiphy *wiphy
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
+	, int changed
 #endif
-	u32 changed)
+	, u32 mask)
 {
 #if 0
 	struct iwm_priv *iwm = wiphy_to_iwm(wiphy);
@@ -4607,8 +4606,8 @@ static int cfg80211_rtw_set_txpower(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	struct wireless_dev *wdev,
 #endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0))
-	int radio_idx,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
+	int link_id,
 #endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)) || defined(COMPAT_KERNEL_RELEASE)
 	enum nl80211_tx_power_setting type, int mbm)
@@ -4672,9 +4671,13 @@ static int cfg80211_rtw_get_txpower(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	struct wireless_dev *wdev,
 #endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0))
 	int radio_idx,
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0))
 	unsigned int link_id,
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
+	int link_id,
 #endif
 	int *dbm)
 {
@@ -5480,27 +5483,13 @@ exit:
 	return ret;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
-static int cfg80211_rtw_change_beacon(struct wiphy *wiphy,
-                                     struct net_device *ndev,
-                                     struct cfg80211_ap_update *info)
-{
-    	_adapter *adapter = rtw_netdev_priv(ndev);
-	int ret = 0;
-
-    // No assocresp_ies in cfg80211_ap_update, skip that part
-
-    // Use beacon and probe_resp fields
-	if (info->beacon.head_len > 0)
-    ret = rtw_add_beacon(adapter,
-                         info->beacon.head, info->beacon.head_len,
-                         info->beacon.tail, info->beacon.tail_len);
-
-    return ret;
-}
-#else
 static int cfg80211_rtw_change_beacon(struct wiphy *wiphy, struct net_device *ndev,
-		struct cfg80211_beacon_data *info)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
+		struct cfg80211_ap_update *info
+#else
+		struct cfg80211_beacon_data *info
+#endif
+)
 {
 	int ret = 0;
 	_adapter *adapter = (_adapter *)rtw_netdev_priv(ndev);
@@ -5517,14 +5506,20 @@ static int cfg80211_rtw_change_beacon(struct wiphy *wiphy, struct net_device *nd
 		rtw_cfg80211_set_proberesp_ies(ndev, info->proberesp_ies, info->proberesp_ies_len);
 #endif /* not_yet */
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
+	if (info->beacon.assocresp_ies_len > 0)
+		rtw_cfg80211_set_assocresp_ies(ndev, info->beacon.assocresp_ies, info->beacon.assocresp_ies_len);
+
+	ret = rtw_add_beacon(adapter, info->beacon.head, info->beacon.head_len, info->beacon.tail, info->beacon.tail_len);
+#else
 	if (info->assocresp_ies_len > 0)
 		rtw_cfg80211_set_assocresp_ies(ndev, info->assocresp_ies, info->assocresp_ies_len);
 
 	ret = rtw_add_beacon(adapter, info->head, info->head_len, info->tail, info->tail_len);
+#endif
 
 	return ret;
 }
-#endif
 
 static int cfg80211_rtw_stop_ap(struct wiphy *wiphy, struct net_device *ndev
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || defined(CONFIG_MLD_KERNEL_PATCH)

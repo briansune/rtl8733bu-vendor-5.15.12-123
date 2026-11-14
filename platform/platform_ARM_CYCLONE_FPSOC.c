@@ -12,14 +12,24 @@
  * more details.
  *
  *****************************************************************************/
+/*
+ * Description:
+ *	This file can be applied to following platforms:
+ *
+ */
+
 #include <drv_types.h>
+
 
 int platform_wifi_power_on(void)
 {
 	int ret = 0;
+
 	return ret;
 }
 
 void platform_wifi_power_off(void)
 {
+
+
 }

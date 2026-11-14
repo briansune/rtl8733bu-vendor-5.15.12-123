@@ -15,6 +15,12 @@
 
 #include <drv_types.h>
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0))
+#define RTW_WDEV_CAC_STARTED(wdev) ((wdev)->links[0].cac_started)
+#else
+#define RTW_WDEV_CAC_STARTED(wdev) ((wdev)->cac_started)
+#endif
+
 #ifdef CONFIG_IOCTL_CFG80211
 #if !RTW_PER_ADAPTER_WIPHY
 void rtw_chset_hook_os_channels(struct rtw_chset *chset, void *os_ref)
@@ -154,9 +160,12 @@ static void rtw_regd_schedule_dfs_chan_update(struct wiphy *wiphy)
 			return;
 		rtw_regd_set_du_chdef(wiphy);
 	}
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)) || defined(CONFIG_MLD_KERNEL_PATCH)
-    // Your kernel doesn't support punct_bitmap, omit it:
-    cfg80211_ch_switch_notify(wiphy_data->du_wdev->netdev, &wiphy_data->du_chdef, link_id);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0))
+	cfg80211_ch_switch_notify(wiphy_data->du_wdev->netdev, &wiphy_data->du_chdef, 0);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)) || defined(CONFIG_MLD_KERNEL_PATCH)
+	/* ToDo CONFIG_RTW_MLD */
+	cfg80211_ch_switch_notify(wiphy_data->du_wdev->netdev, &wiphy_data->du_chdef,
+	                          link_id, punct_bitmap);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 2))
 	cfg80211_ch_switch_notify(wiphy_data->du_wdev->netdev, &wiphy_data->du_chdef, link_id);
 #else
@@ -997,11 +1006,11 @@ static void async_cac_change_work_hdl(_workitem *work)
 		evt = LIST_CONTAINOR(list, struct async_cac_change_evt, list);
 
 		rtnl_lock();
-		#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
-		    cfg80211_cac_event(evt->netdev, &evt->chandef, evt->event, GFP_KERNEL, 0);
-		#else
-		    cfg80211_cac_event(evt->netdev, &evt->chandef, evt->event, GFP_KERNEL);
-		#endif
+		cfg80211_cac_event(evt->netdev, &evt->chandef, evt->event, GFP_KERNEL
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0))
+		, 0
+#endif
+		);
 		rtnl_unlock();
 
 		rtw_mfree(evt, sizeof(*evt));
@@ -1091,11 +1100,11 @@ static void rtw_cfg80211_cac_event(struct rf_ctl_t *rfctl, u8 band_idx
 		if (async)
 			cfg80211_cac_event_async(iface->pnetdev, &chdef, event);
 		else
-			#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
-			    cfg80211_cac_event(iface->pnetdev, &chdef, event, GFP_KERNEL, 0);
-			#else
-			    cfg80211_cac_event(iface->pnetdev, &chdef, event, GFP_KERNEL);
-			#endif
+			cfg80211_cac_event(iface->pnetdev, &chdef, event, GFP_KERNEL
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0))
+				, 0
+#endif
+				);
 	}
 }
 
@@ -1133,12 +1142,7 @@ void rtw_cfg80211_cac_finished_event(struct rf_ctl_t *rfctl, u8 band_idx
 		if (!iface || !(ifbmp & BIT(iface->iface_id)))
 			continue;
 		/* finish only for wdev with cac_started */
-		#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0) /* adjust version */
-		    if (!iface->rtw_wdev || !iface->rtw_wdev->cac_started)
-		#else
-		    if (!iface->rtw_wdev)
-		#endif
-		//if (!iface->rtw_wdev || !iface->rtw_wdev->cac_started)
+		if (!iface->rtw_wdev || !RTW_WDEV_CAC_STARTED(iface->rtw_wdev))
 			ifbmp &= ~BIT(iface->iface_id);
 	}
 
@@ -1161,12 +1165,7 @@ void rtw_cfg80211_cac_aborted_event(struct rf_ctl_t *rfctl, u8 band_idx
 		if (!iface || !(ifbmp & BIT(iface->iface_id)))
 			continue;
 		/* abort only for wdev with cac_started */
-	#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0) /* adjust version */
-	    if (!iface->rtw_wdev || !iface->rtw_wdev->cac_started)
-	#else
-	    if (!iface->rtw_wdev)
-	#endif
-	//	if (!iface->rtw_wdev || !iface->rtw_wdev->cac_started)
+		if (!iface->rtw_wdev || !RTW_WDEV_CAC_STARTED(iface->rtw_wdev))
 			ifbmp &= ~BIT(iface->iface_id);
 	}
 
@@ -1253,19 +1252,9 @@ void rtw_cfg80211_cac_force_finished(struct rf_ctl_t *rfctl, u8 band_idx
 			started_ifbmp &= ~BIT(iface->iface_id);
 			continue;
 		}
-		#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
-    if (need_start && iface->rtw_wdev->cac_started)
-#else
-    if (need_start)
-#endif
-//		if (need_start && iface->rtw_wdev->cac_started)
+		if (need_start && RTW_WDEV_CAC_STARTED(iface->rtw_wdev))
 			started_ifbmp &= ~BIT(iface->iface_id);
-    #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
-    else if (!need_start && !iface->rtw_wdev->cac_started)
-#else
-    else if (!need_start)
-#endif
-//		else if (!need_start && !iface->rtw_wdev->cac_started)
+		else if (!need_start && !RTW_WDEV_CAC_STARTED(iface->rtw_wdev))
 			finished_ifbmp &= ~BIT(iface->iface_id);
 	}
 
